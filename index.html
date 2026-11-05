@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Читаемый AI-текст · визуальный конспект</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#080810; --bg2:#0d0d18; --panel:#12121f; --panel2:#171727; --line:#262638;
+    --ink:#f0f0f8; --muted:#aeb4c8; --faint:#8a8aa2;
+    --purple:#a78bfa; --purple-deep:#7c5cff; --green:#4ade80; --red:#fb7185;
+    --amber:#fbbf24; --blue:#60a5fa; --cyan:#22d3ee;
+    --radius:18px; --maxw:1120px;
+    --gutter:22px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    font-size:16.5px;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body::before{content:"";position:fixed;inset:0;z-index:-2;
+    background:
+      radial-gradient(900px 500px at 78% -8%, rgba(124,92,255,.20), transparent 60%),
+      radial-gradient(800px 600px at 0% 18%, rgba(34,211,238,.07), transparent 55%),
+      radial-gradient(700px 600px at 100% 90%, rgba(167,139,250,.08), transparent 60%)}
+  a{color:inherit;text-decoration:none}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;line-height:1.12;letter-spacing:-.02em;font-weight:700;margin:0}
+  ::selection{background:rgba(124,92,255,.35)}
+
+  #progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:120;
+    background:linear-gradient(90deg,var(--purple-deep),var(--cyan));box-shadow:0 0 14px rgba(124,92,255,.7)}
+
+  nav{position:sticky;top:0;z-index:90;backdrop-filter:blur(14px);
+    background:rgba(8,8,16,.72);border-bottom:1px solid var(--line)}
+  .nav-in{max-width:var(--maxw);margin:0 auto;display:flex;align-items:center;gap:18px;padding:11px var(--gutter)}
+  .brand{font-family:'Space Grotesk';font-weight:700;font-size:15px;white-space:nowrap;display:flex;gap:9px;align-items:center}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--purple);box-shadow:0 0 12px var(--purple)}
+  .nav-links{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin-left:auto;min-width:0;-webkit-overflow-scrolling:touch}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-links a{font-size:12.5px;color:var(--muted);padding:6px 11px;border-radius:9px;white-space:nowrap;transition:.18s;font-weight:500}
+  .nav-links a:hover{color:var(--ink);background:var(--panel2)}
+  .nav-links a.active{color:#fff;background:linear-gradient(135deg,var(--purple-deep),#5b3fd6)}
+
+  .wrap{max-width:var(--maxw);margin:0 auto;padding-left:var(--gutter);padding-right:var(--gutter)}
+  section{padding-top:76px;padding-bottom:52px;scroll-margin-top:70px;border-top:1px solid rgba(255,255,255,.06)}
+
+  /* ---------- HERO ---------- */
+  .hero{padding-top:54px;padding-bottom:40px}
+  .eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:'JetBrains Mono';font-size:12px;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--purple);
+    border:1px solid rgba(167,139,250,.3);padding:6px 13px;border-radius:999px;background:rgba(124,92,255,.08)}
+  .hero h1{font-size:clamp(34px,6vw,62px);margin:22px 0 8px;background:linear-gradient(180deg,#fff 30%,#b9b4e8);
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero .sub{font-size:clamp(17px,2.4vw,22px);color:var(--muted);max-width:760px;font-weight:500}
+  .chips{display:flex;flex-wrap:wrap;gap:9px;margin:26px 0 30px}
+  .chip{font-family:'JetBrains Mono';font-size:12.5px;color:var(--ink);background:var(--panel);
+    border:1px solid var(--line);padding:7px 13px;border-radius:10px;display:flex;gap:7px;align-items:center}
+  .chip b{color:var(--purple);font-weight:700}
+  .hero-grid{display:grid;grid-template-columns:1.25fr .95fr;gap:26px;align-items:stretch;margin-top:8px}
+  @media(max-width:840px){.hero-grid{grid-template-columns:1fr}}
+  .thesis-card{background:linear-gradient(160deg,var(--panel),#0e0e1a);border:1px solid var(--line);
+    border-radius:var(--radius);padding:28px 26px;position:relative;overflow:hidden}
+  .thesis-card::before{content:"\201C";position:absolute;top:-30px;right:6px;font-size:150px;font-family:Georgia,serif;
+    color:rgba(167,139,250,.10);line-height:1}
+  .thesis-card .lab{font-family:'JetBrains Mono';font-size:11.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+  .thesis-card p{font-size:19px;font-weight:500;margin:0;color:#f3f2fb}
+  .thesis-card .accent{color:var(--purple);font-weight:700}
+  /* hero cover = the article's lead image / og:image (or a CSS-only panel if none) */
+  .cover{position:relative;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);min-height:230px;display:block;background:#0c0c16}
+  .cover img{width:100%;height:100%;object-fit:cover;display:block;opacity:.92;transition:.4s}
+  .cover:hover img{opacity:1;transform:scale(1.03)}
+  .cover .ribbon{position:absolute;left:0;bottom:0;right:0;padding:14px 16px;
+    background:linear-gradient(0deg,rgba(0,0,0,.85),transparent);font-size:13px;color:#ddd;font-weight:500}
+
+  /* section heading + "read in original" pill */
+  .shead{display:flex;align-items:baseline;gap:14px;margin-bottom:26px;flex-wrap:wrap}
+  .shead .num{font-family:'JetBrains Mono';font-size:13px;color:var(--purple);border:1px solid rgba(167,139,250,.3);
+    border-radius:8px;padding:3px 9px;background:rgba(124,92,255,.07)}
+  .shead h2{font-size:clamp(24px,3.6vw,34px)}
+  .shead .src{margin-left:auto}
+  .lead{color:var(--muted);font-size:16.5px;max-width:780px;margin:-8px 0 26px}
+
+  /* deep-link pill -> the place in the article (anchor) */
+  .src{font-family:'JetBrains Mono';font-size:12px;color:var(--cyan);border:1px solid rgba(34,211,238,.28);
+    background:rgba(34,211,238,.06);padding:3px 9px;border-radius:7px;white-space:nowrap;transition:.16s;display:inline-flex;gap:6px;align-items:center}
+  .src:hover{background:rgba(34,211,238,.18);color:#fff;border-color:var(--cyan)}
+  .src svg{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2}
+
+  .grid{display:grid;gap:18px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:840px){.g2,.g3{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px 22px;transition:.22s}
+  .card:hover{border-color:rgba(167,139,250,.4);transform:translateY(-3px);box-shadow:0 14px 40px rgba(0,0,0,.4)}
+  .card h3{font-size:18px;margin-bottom:9px;display:flex;align-items:center;gap:10px}
+  .card h3 .ic{width:30px;height:30px;border-radius:8px;background:rgba(124,92,255,.13);display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 auto}
+  .card p{margin:0 0 10px;color:var(--muted);font-size:14.5px}
+  .card p:last-child{margin-bottom:0}
+  .card strong{color:var(--ink);font-weight:600}
+  .k{font-family:'JetBrains Mono';font-size:.9em;color:var(--purple);background:rgba(124,92,255,.10);padding:1px 6px;border-radius:5px;border:1px solid rgba(124,92,255,.18)}
+
+  /* figure / real article image */
+  figure{margin:0}
+  .shot{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#0c0c16;cursor:zoom-in;position:relative;transition:.22s}
+  .shot:hover{border-color:var(--purple);box-shadow:0 0 0 1px var(--purple),0 12px 36px rgba(124,92,255,.25)}
+  .shot img{display:block;width:auto;max-width:100%;height:auto;margin-inline:auto}
+  .shot .badge{position:absolute;top:9px;left:9px;font-family:'JetBrains Mono';font-size:10.5px;color:#fff;
+    background:rgba(0,0,0,.62);backdrop-filter:blur(4px);padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.14)}
+  .shot .zoom{position:absolute;top:9px;right:9px;width:26px;height:26px;border-radius:6px;background:rgba(0,0,0,.55);
+    display:flex;align-items:center;justify-content:center;opacity:0;transition:.2s}
+  .shot:hover .zoom{opacity:1}
+  .shot .zoom svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2}
+  figcaption{font-size:13px;color:var(--faint);margin-top:9px;padding:0 2px}
+  figcaption b{color:var(--muted);font-weight:600}
+
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+  @media(max-width:840px){.split{grid-template-columns:1fr}}
+
+  /* your own SVG diagram canvas */
+  .canvas{background:radial-gradient(circle at 50% 0%,#0c0c16,#060609);border:1px solid var(--line);border-radius:var(--radius);padding:10px}
+  .canvas svg{width:100%;height:auto;display:block;border-radius:12px}
+  .cap-hand{font-family:'Caveat';font-size:15px;color:var(--faint);text-align:center;padding:6px 0 4px}
+
+  /* CODE block (render code as LIVE text, never as a screenshot) */
+  .code{background:#0b0b14;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:0}
+  .code .bar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--line);background:#0e0e1a}
+  .code .bar .lang{font-family:'JetBrains Mono';font-size:11px;color:var(--purple);text-transform:uppercase;letter-spacing:.08em}
+  .code .bar .src{margin-left:auto}
+  .code pre{margin:0;padding:16px 18px;overflow:auto;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;color:#d6d6ea}
+  .code pre .cm{color:var(--faint)}  /* wrap comments in <span class=cm> if you highlight by hand */
+
+  /* data / benchmark table */
+  .tbl{width:100%;border-collapse:collapse;font-size:14px;overflow:hidden;border-radius:12px;border:1px solid var(--line)}
+  .tbl th,.tbl td{padding:10px 13px;text-align:left;border-bottom:1px solid var(--line)}
+  .tbl th{background:var(--panel2);font-family:'JetBrains Mono';font-size:12px;color:var(--purple);letter-spacing:.04em;font-weight:600}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl td:not(:first-child){font-family:'JetBrains Mono';color:var(--ink)}
+  .tbl .best{color:var(--green);font-weight:700}
+
+  .quotes{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:840px){.quotes{grid-template-columns:1fr}}
+  .quote{background:linear-gradient(150deg,var(--panel2),#0d0d18);border:1px solid var(--line);
+    border-left:3px solid var(--purple);border-radius:14px;padding:20px 22px}
+  .quote .q{font-family:'Space Grotesk';font-size:17px;font-weight:500;color:#f1f0fb;line-height:1.4}
+  .quote .m{margin-top:12px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--faint)}
+
+  /* article outline (replaces the video timeline): clickable sections + figure thumbs */
+  .tl{position:relative;margin-top:10px;padding-left:30px}
+  .tl::before{content:"";position:absolute;left:9px;top:6px;bottom:6px;width:2px;background:linear-gradient(180deg,var(--purple-deep),rgba(124,92,255,.15))}
+  .tl-item{position:relative;padding:0 0 26px 0}
+  .tl-item::before{content:"";position:absolute;left:-26px;top:5px;width:13px;height:13px;border-radius:50%;
+    background:var(--bg);border:2.5px solid var(--purple);box-shadow:0 0 0 4px rgba(124,92,255,.10)}
+  .tl-item.big::before{background:var(--purple);box-shadow:0 0 14px var(--purple),0 0 0 4px rgba(124,92,255,.12)}
+  .tl-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .tl-head h4{font-family:'Space Grotesk';font-size:16.5px;margin:0;font-weight:600}
+  .tl-item p{margin:6px 0 0;color:var(--muted);font-size:14px;max-width:720px}
+  .tl-thumbs{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .tl-thumbs .shot{width:210px;flex:0 0 auto}
+  @media(max-width:560px){.tl-thumbs .shot{width:100%}}
+
+  /* "Как применить" / action checklist */
+  .checks{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:840px){.checks{grid-template-columns:1fr}}
+  .check{display:flex;gap:13px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:15px 16px;cursor:pointer;transition:.18s;user-select:none}
+  .check:hover{border-color:rgba(167,139,250,.4);background:var(--panel2)}
+  .check .box{width:22px;height:22px;border-radius:6px;border:2px solid var(--faint);flex:0 0 auto;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:.18s}
+  .check .box svg{width:13px;height:13px;stroke:#fff;stroke-width:3;fill:none;opacity:0;transition:.18s}
+  .check.done .box{background:var(--green);border-color:var(--green)}
+  .check.done .box svg{opacity:1}
+  .check.done .txt{color:var(--faint);text-decoration:line-through}
+  .check .txt{font-size:14.5px;color:var(--ink)}
+  .check .txt b{color:var(--purple);font-weight:600}
+
+  .facts{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  @media(max-width:840px){.facts{grid-template-columns:repeat(2,1fr)}}
+  .fact{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 16px;text-align:center}
+  .fact .n{font-family:'Space Grotesk';font-size:30px;font-weight:700;background:linear-gradient(135deg,#fff,var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .fact .l{font-size:12.5px;color:var(--muted);margin-top:4px}
+
+  .tools{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:840px){.tools{grid-template-columns:1fr}}
+  .tool-col h3{font-size:15px;color:var(--purple);margin-bottom:12px;font-family:'JetBrains Mono';letter-spacing:.04em}
+  .tool{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .tool:last-child{border-bottom:none}
+  .tool .name{font-weight:600;color:var(--ink);min-width:150px;flex:0 0 auto}
+  .tool .desc{color:var(--muted)}
+  @media(max-width:560px){.tool{flex-direction:column;gap:2px}.tool .name{min-width:0}}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .pill{font-size:12.5px;font-family:'JetBrains Mono';padding:5px 11px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--panel)}
+  .pill.good{color:var(--green);border-color:rgba(74,222,128,.3);background:rgba(74,222,128,.06)}
+  .pill.bad{color:var(--red);border-color:rgba(251,113,133,.3);background:rgba(251,113,133,.06)}
+
+  footer{padding:46px var(--gutter) 70px;color:var(--faint);font-size:13px;text-align:center;border-top:1px solid var(--line);margin-top:30px}
+  footer a{color:var(--purple)}
+
+  #lb{position:fixed;inset:0;z-index:200;background:rgba(4,4,9,.93);backdrop-filter:blur(8px);
+    display:none;align-items:center;justify-content:center;flex-direction:column;padding:24px;cursor:zoom-out}
+  #lb.on{display:flex;animation:fade .2s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  #lb img{max-width:94vw;max-height:80vh;border-radius:12px;border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.7)}
+  #lb .lbcap{color:var(--muted);font-size:14px;margin-top:16px;max-width:760px;text-align:center}
+  #lb .lbbtn{margin-top:14px;display:inline-flex;gap:8px;align-items:center;background:var(--purple-deep);color:#fff;padding:10px 18px;border-radius:10px;font-weight:600;font-size:14px;cursor:pointer}
+  #lb .lbbtn svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2}
+  #lb .close{position:absolute;top:20px;right:24px;color:#fff;font-size:30px;opacity:.7;cursor:pointer}
+
+  .rv{opacity:0;transform:translateY(22px);transition:opacity .6s cubic-bezier(.2,.7,.3,1),transform .6s cubic-bezier(.2,.7,.3,1)}
+  .rv.in{opacity:1;transform:none}
+  .note{font-size:13.5px;color:var(--faint);background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.22);border-radius:12px;padding:14px 16px;margin-top:18px}
+  .note b{color:var(--amber)}
+
+  @media(max-width:640px){
+    :root{--gutter:18px;--radius:14px}
+    body{font-size:15.5px;line-height:1.6}
+    .nav-in{padding:10px var(--gutter);gap:12px}
+    .brand{font-size:13.5px}
+    .hero{padding-top:24px;padding-bottom:24px}
+    .hero h1{font-size:clamp(25px,7.2vw,32px);margin:14px 0 10px;line-height:1.18}
+    .hero .sub{font-size:15.5px;line-height:1.55}
+    .eyebrow{font-size:11px;padding:5px 11px;letter-spacing:.12em}
+    section{padding-top:52px;padding-bottom:36px;scroll-margin-top:56px}
+    .shead{margin-bottom:20px}
+    .shead h2{font-size:24px}
+    .lead{font-size:15px}
+    .grid{gap:14px}
+    .card{padding:16px 16px}
+    .thesis-card{padding:20px 18px}
+    .quote{padding:16px 18px}
+    .fact{padding:14px 10px}
+    .fact .n{font-size:24px}
+    .check{padding:12px 14px;gap:11px}
+    .check .txt{font-size:13.5px}
+    .tbl th,.tbl td{padding:8px 10px;font-size:13px}
+    footer{padding:36px var(--gutter) 60px;font-size:12.5px}
+  }
+
+  .shot.light{background:#fff;padding-top:36px}
+  .shot.fig5{max-width:760px;margin-inline:auto}
+  .tokens{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 14px;font-family:'Space Grotesk';font-size:19px}
+  .tok{padding:2px 9px;border-radius:7px}
+  .tok.n{background:rgba(96,165,250,.16);color:#bcd9ff}
+  .tok.v{background:rgba(74,222,128,.16);color:#a8f0c3}
+  .tok.bad{background:rgba(251,113,133,.16);color:#ffc0cb}
+  .cap-note{font-size:13px;color:var(--faint);margin:10px 0 0}
+  .ex{font-family:'Space Grotesk';font-size:17px!important;color:var(--ink)!important}
+  .ex .pill{font-size:13px;display:inline-block;margin:2px 4px 2px 0}
+  .scroll-table{overflow-x:auto}
+  .tbl.plain{min-width:640px}
+  .tbl.plain td:not(:first-child){font-family:inherit;color:var(--muted)}
+  .lnk{color:var(--cyan)}
+  .card p,.tl-item p,.check .txt,.tool,figcaption,.note{font-size:16px}
+  figcaption .src{margin-top:4px}
+  .code .bar .lang{letter-spacing:.02em;text-transform:none}
+  .code pre{white-space:pre-wrap}
+  @media(max-width:640px){.check .txt{font-size:16px}.nav-links a{min-height:44px;display:flex;align-items:center}.src{min-height:44px}}
+</style>
+
+<style data-visual-html-responsive="v1">
+:root {
+  --page-gutter: 22px;
+  --gutter: 22px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  max-width: 100%;
+}
+
+body {
+  overflow-x: visible !important;
+}
+
+.wrap,
+.nav-in,
+footer,
+[data-mobile-container] {
+  width: 100% !important;
+  margin-inline: auto;
+  padding-inline: var(--page-gutter) !important;
+}
+
+section {
+  scroll-margin-top: 70px;
+}
+
+.grid > *,
+.hero-grid > *,
+.split > *,
+.quotes > *,
+.checks > *,
+.facts > *,
+.tools > *,
+.debate > *,
+.nav-links,
+.navlinks,
+.shead > *,
+.sec-head > *,
+.tl-item,
+.timeline > *,
+[data-mobile-stack] > * {
+  min-width: 0;
+}
+
+img,
+video,
+audio,
+canvas,
+iframe,
+figure {
+  max-width: 100% !important;
+}
+
+img,
+video,
+canvas {
+  height: auto;
+}
+
+video,
+audio,
+iframe {
+  display: block;
+  width: 100% !important;
+}
+
+iframe {
+  height: auto !important;
+  aspect-ratio: 16 / 9;
+  border: 0;
+}
+
+svg {
+  max-width: 100%;
+}
+
+pre,
+table,
+.tbl,
+[data-mobile-scroll] {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+table,
+.tbl {
+  display: block;
+}
+
+[data-mobile-scroll] > svg {
+  width: 640px !important;
+  min-width: 640px !important;
+  max-width: none !important;
+  height: auto;
+}
+
+.k,
+.srcline,
+.srcline code,
+.eyebrow,
+.chip,
+.pill,
+.tag,
+.au,
+.src,
+.tc,
+.t,
+.timecode,
+.trick-head h3,
+.item-head h3,
+.check .txt,
+.talk p,
+.trick p,
+.trick li,
+.item p,
+.item li,
+.card p,
+.card li,
+.quote .q,
+.quote .ru,
+blockquote .ru,
+.tl-item p,
+.timeline p,
+.deb li,
+.callout,
+.fact .d,
+.tool .desc,
+[data-mobile-copy],
+[data-mobile-copy] p,
+[data-mobile-copy] li,
+[data-mobile-copy] dd,
+[data-mobile-wrap],
+code:not(pre code),
+h1,
+h2,
+h3,
+h4 {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.eyebrow,
+.chip,
+.pill,
+.tag,
+.au,
+.src,
+.links .src {
+  max-width: 100%;
+}
+
+.src,
+.links .src {
+  white-space: normal !important;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --page-gutter: 18px;
+    --gutter: 18px;
+    --radius: 14px;
+  }
+
+  .nav-in,
+  nav .wrap {
+    min-height: 60px;
+    height: auto !important;
+    gap: 8px !important;
+    padding-block: 8px !important;
+  }
+
+  .brand,
+  .navbrand {
+    display: none !important;
+  }
+
+  .nav-links,
+  .navlinks {
+    width: 100%;
+    margin-left: 0 !important;
+    padding-bottom: 2px;
+    justify-content: space-between;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .nav-links::-webkit-scrollbar,
+  .navlinks::-webkit-scrollbar {
+    display: block;
+    height: 2px;
+  }
+
+  nav a,
+  a.src,
+  a.tc,
+  a.t,
+  a.timecode,
+  a.btn,
+  button,
+  [role="button"],
+  .lbbtn,
+  #lb .close,
+  .lightbox .close,
+  [data-seek] {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  nav a,
+  a.src,
+  a.tc,
+  a.t,
+  a.timecode,
+  a.btn,
+  button,
+  [role="button"],
+  .lbbtn,
+  #lb .close,
+  .lightbox .close,
+  a[data-seek],
+  button[data-seek],
+  span[data-seek] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-links a,
+  .navlinks a {
+    flex: 0 0 auto;
+    padding: 9px 8px !important;
+  }
+
+  section {
+    padding-block: 52px 36px !important;
+    scroll-margin-top: 56px !important;
+  }
+
+  header.hero,
+  .hero {
+    padding-block: 24px 24px !important;
+  }
+
+  .hero h1 {
+    font-size: clamp(30px, 8vw, 36px) !important;
+    line-height: 1.1;
+    margin-top: 18px;
+  }
+
+  .g2,
+  .g3,
+  .g4,
+  .grid:not(.g2):not(.g3):not(.g4),
+  .hero-grid,
+  .split,
+  .quotes,
+  .checks,
+  .facts,
+  .tools,
+  .debate,
+  [data-mobile-stack="grid"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  [data-mobile-stack="flex"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .canvas:not([data-mobile-diagram="reflow"]),
+  figure:not([data-mobile-diagram="reflow"]):has(> svg[viewBox]) {
+    max-width: 100%;
+    overflow-x: auto !important;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .canvas:not([data-mobile-diagram="reflow"]) > svg[viewBox]:not([data-mobile-diagram="reflow"]),
+  figure:not([data-mobile-diagram="reflow"]) > svg[viewBox]:not([data-mobile-diagram="reflow"]) {
+    width: 640px !important;
+    min-width: 640px !important;
+    max-width: none !important;
+    height: auto;
+  }
+
+  .talk,
+  .trick,
+  .item,
+  .card,
+  .quote,
+  .fact,
+  .check:not(ul),
+  .check > li,
+  .deb,
+  .thesis,
+  .thesis-card,
+  blockquote,
+  .callout,
+  [data-mobile-card] {
+    padding: 20px 18px !important;
+  }
+
+  blockquote {
+    margin-inline: 0 !important;
+  }
+
+  .trick-head,
+  .item-head,
+  .shead,
+  .sec-head,
+  .code .bar,
+  .tl-head,
+  blockquote footer {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .shead,
+  .sec-head {
+    align-items: flex-start;
+    margin-bottom: 20px !important;
+  }
+
+  .shead h2,
+  .sec-head h2 {
+    font-size: 24px !important;
+  }
+
+  .shead .src,
+  .sec-head .src {
+    margin-left: 0 !important;
+  }
+
+  .trick-head .tnum,
+  .item-head .tnum {
+    min-width: 38px;
+    height: 38px;
+    font-size: 19px;
+  }
+
+  .trick-head h3,
+  .item-head h3 {
+    padding-top: 4px;
+    font-size: 20px;
+  }
+
+  .who {
+    padding-left: 0;
+  }
+
+  .about,
+  .key,
+  .try,
+  .risk {
+    padding: 15px 16px;
+  }
+
+  .hero .sub,
+  .hero .lede,
+  .hero .lead,
+  .lead,
+  .lede,
+  .sec-sub,
+  .talk p,
+  .trick p,
+  .trick li,
+  .item p,
+  .item li,
+  .card p,
+  .card li,
+  .quote .q,
+  .quote .ru,
+  blockquote .ru,
+  .tl-item p,
+  .timeline p,
+  .check .txt,
+  .check > li,
+  .deb li,
+  .callout,
+  .fact .d,
+  .tool .desc,
+  .watch-item p,
+  [data-mobile-copy],
+  [data-mobile-copy] p,
+  [data-mobile-copy] li,
+  [data-mobile-copy] dd {
+    font-size: 16px !important;
+  }
+
+  .fact {
+    align-items: flex-start;
+  }
+
+  .fact .v {
+    min-width: 0 !important;
+  }
+
+  .tl {
+    padding-left: 24px;
+  }
+
+  .tl-thumbs .shot {
+    width: 100% !important;
+  }
+
+  .links {
+    align-items: stretch;
+  }
+
+  .links .src {
+    min-height: 44px;
+    padding: 9px 11px;
+  }
+
+  .check:not(ul) {
+    flex-wrap: wrap;
+  }
+
+  .check .txt {
+    flex: 1 1 220px;
+  }
+
+  #lb,
+  .lightbox {
+    padding: 16px !important;
+  }
+
+  footer {
+    padding-block: 36px 60px !important;
+  }
+}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<nav>
+  <div class="nav-in">
+    <div class="brand"><span class="dot"></span>Читаемый AI-текст</div>
+    <div class="nav-links">
+      <a href="#problem">Проблема</a>
+      <a href="#p1">1. Разбор</a>
+      <a href="#p2">2. Начало</a>
+      <a href="#p3">3. Единообразие</a>
+      <a href="#p4">4. Различия</a>
+      <a href="#p5">5. Глаголы</a>
+      <a href="#limits">Границы</a>
+      <a href="#apply">Как&nbsp;применить</a>
+    </div>
+  </div>
+</nav>
+
+<header class="wrap hero">
+  <span class="eyebrow">Статья · Full Stack Data · 29 октября 2026</span>
+  <h1>Пять правил для читаемого AI-текста в больших объёмах</h1>
+  <p class="sub">Лента сгенерированных заголовков и сводок читается быстро, когда все её пункты устроены одинаково, а различия стоят в начале и что-то значат.</p>
+  <div class="chips">
+    <span class="chip"><b>Shreya Shankar</b></span>
+    <span class="chip">29 октября 2026</span>
+    <span class="chip">оригинал: ~23 мин по оценке скрипта</span>
+    <span class="chip">Full Stack Data, Carnegie Mellon University</span>
+  </div>
+  <div class="thesis-card">
+    <div class="lab">Главный тезис</div>
+    <p>Читатель не вчитывается в ленту, а сканирует её. Поэтому модель должна писать каждый пункт <span class="accent">предсказуемо и единообразно</span>. Авторы предлагают отдать этот чек-лист coding-агенту или оформить его как skill.</p>
+    <p style="margin-top:16px"><a class="src" href="https://fsdatalab.github.io/blog/agent-text-at-scale/" target="_blank" rel="noopener">Читать оригинал ↗</a></p>
+  </div>
+</header>
+
+<section class="wrap" style="padding-top:30px">
+  <div class="shead rv"><span class="num">TL;DR</span><h2>Что проверять в каждом списке</h2></div>
+  <div class="grid g3">
+    <div class="card rv"><h3>1. Порядок слов</h3><p>Начинайте пункт с подлежащего или глагола. Если подлежащее везде одно, опустите его и начинайте с глагола.</p></div>
+    <div class="card rv"><h3>2. Первые слова</h3><p>В списке читатель часто видит только первые два слова каждого пункта. Отличительные слова ставьте туда.</p></div>
+    <div class="card rv"><h3>3. Один шаблон</h3><p>Держите в списке одну структуру и одно слово на понятие: не «issue» в одной строке и «page» в другой.</p></div>
+    <div class="card rv"><h3>4. Значимые различия</h3><p>Читатель ищет смысл в любом отличии пункта. Если длина, состав или слова различаются, за этим должна стоять причина.</p></div>
+    <div class="card rv"><h3>5. Глагол с оценкой</h3><p>В панели жалоб пишите «complain», в панели похвалы — «love». Оценка темы становится понятна по одному глаголу.</p></div>
+  </div>
+</section>
+
+<section id="problem" class="wrap">
+  <div class="shead rv">
+    <span class="num">00</span><h2>Сгенерированные ленты трудно сканировать</h2>
+    <a class="src" href="https://fsdatalab.github.io/blog/agent-text-at-scale/#the-problem" target="_blank" rel="noopener">в статье ↗</a>
+  </div>
+  <p class="lead rv">Такие ленты уже стали частью повседневных продуктов. В Claude Code и Codex боковая панель показывает сгенерированные названия прошлых сессий агента, а Apple Intelligence на iPhone группирует и пересказывает стопки уведомлений. Вдобавок люди создают с помощью AI временные панели и страницы и широко ими делятся.</p>
+  <p class="lead rv">Модель оформляет каждый пункт по-своему, а для быстрого чтения пункты должны быть предсказуемыми и единообразными. Свой чек-лист авторы вывели из работы над такими панелями и из чтения их содержимого.</p>
+</section>
+
+<section id="p1" class="wrap">
+  <div class="shead rv">
+    <span class="num">01</span><h2>Порядок слов должен совпадать с разбором</h2>
+    <a class="src" href="https://fsdatalab.github.io/blog/agent-text-at-scale/#1-match-how-human-readers-parse-sentences" target="_blank" rel="noopener">в статье ↗</a>
+  </div>
+  <p class="lead rv">В 1970 году психолингвист Thomas Bever описал стратегию NVN у читателей английского: первое существительное они считают подлежащим, следующий глагол — действием, следующее существительное — объектом. Если текст не следует этой схеме, приходится перечитывать.</p>
+
+  <div class="grid g2">
+    <div class="card rv parse">
+      <h3>Разбор с первого прохода</h3>
+      <div class="tokens" lang="en"><span class="tok n">The agent</span><span class="tok v">fixed</span><span>the login</span><span class="tok n">bug</span></div>
+      <p>Читатель сразу понимает: агент (подлежащее) исправил (действие) ошибку (объект).</p>
+    </div>
+    <div class="card rv parse">
+      <h3>Разбор со второго прохода</h3>
+      <div class="tokens" lang="en"><span>Login</span><span class="tok bad">bug</span><span class="tok bad">fixed</span><span>by</span><span class="tok n">the agent</span></div>
+      <p>Сначала кажется, что bug что-то исправил. Лишь на «by the agent» читатель находит настоящее подлежащее и разбирает фразу заново.</p>
+    </div>
+  </div>
+  <p class="cap-note rv">Схема конспекта по примерам из статьи.</p>
+
+  <div class="card rv" style="margin-top:18px">
+    <h3>Процедура авторов</h3>
+    <p>Начните каждый пункт с подлежащего или глагола. Если подлежащее одно на все пункты, опустите его. Первый глагол поставьте во время, которого ждёт читатель: прошедшее, продолженное или будущее.</p>
+    <p>Заголовки из боковой панели Claude смешивали существительные, герундии и повелительное наклонение. Подлежащее у всех сессий одно — агент, и все сессии активны, поэтому авторы начали каждый заголовок с глагола в продолженной форме.</p>
+  </div>
+
+  <figure class="rv" style="margin-top:22px">
+    <div class="shot light" data-full="assets/session-titles.svg" data-href="https://fsdatalab.github.io/blog/agent-text-at-scale/#figure-1" data-cap="Рисунок 1 из статьи: семь заголовков сессий из боковой панели Claude в стилизованном виде (слева) и те же заголовки, начатые с глагола в продолженной форме (справа).">
+      <img src="assets/session-titles.svg" data-origin="article" alt="Семь заголовков сессий в исходном виде и после переписывания: каждый теперь начинается с глагола, например Measuring vLLM performance on eviction queries.">
+      <span class="badge">рис. 1 из статьи</span>
+    </div>
+    <figcaption>Заголовок «vLLM performance on eviction queries» стал «Measuring vLLM performance on eviction queries». Последняя строка уже начиналась с глагола и не изменилась. <a class="src" href="https://fsdatalab.github.io/blog/agent-text-at-scale/#figure-1" target="_blank" rel="noopener">в статье ↗</a></figcaption>
+  </figure>
+</section>
+
+<section id="p2" class="wrap">
+  <div class="shead rv">
+    <span class="num">02</span><h2>Отличительные слова ставьте первыми</h2>
+    <a class="src" href="https://fsdatalab.github.io/blog/agent-text-at-scale/#2-put-the-most-important-words-first" target="_blank" rel="noopener">в статье ↗</a>
+  </div>
+  <p class="lead rv">Jakob Nielsen с помощью eye tracking показал, что страницы читают по F-образной схеме: начало каждой строки прочитывают, большую часть остального пропускают. В списке читатель часто видит лишь первые два слова пункта. Отсюда два шага: найдите слова, которые отличают пункт от остальных, и передвиньте их как можно ближе к началу.</p>
+  <figure class="rv">
+    <div class="shot light" data-full="assets/order-emails.svg" data-href="https://fsdatalab.github.io/blog/agent-text-at-scale/#figure-2" data-cap="Рисунок 2 из статьи: письма о заказах в стилизованном почтовом ящике. Слева статус стоит в конце, справа, как у Amazon, в начале.">
+      <img src="assets/order-emails.svg" data-origin="article" alt="Четыре письма о заказах со статусом в конце темы и четыре письма Amazon со статусом в начале темы.">
+      <span class="badge">рис. 2 из статьи</span>
+    </div>
+    <figcaption>Темы вида «Your order #1001 has shipped» начинаются одинаково. У Amazon письма различаются уже по первому слову: <span class="k">Ordered</span>, <span class="k">Shipped</span>, <span class="k">Delivered</span>. <a class="src" href="https://fsdatalab.github.io/blog/agent-text-at-scale/#figure-2" target="_blank" rel="noopener">в статье ↗</a></figcaption>
+  </figure>
+</section>
+
+<section id="p3" class="wrap">
+  <div class="shead rv">
+    <span class="num">03</span><h2>Одна структура и один термин на весь список</h2>
+    <a class="src" href="https://fsdatalab.github.io/blog/agent-text-at-scale/#3-use-the-same-structure-and-the-same-vocabulary" target="_blank" rel="noopener">в статье ↗</a>
+  </div>
+  <p class="lead rv">Lyn Frazier с коллегами измерили скорость чтения предложений из двух частей, соединённых через «and». Вторая часть читалась быстрее, когда повторяла структуру первой. Авторы переносят этот результат на списки. Правило «одно слово на понятие» подкрепляют стандартом ASD Simplified Technical English и четвёртой эвристикой Nielsen.</p>
+
+  <div class="grid">
+    <figure class="rv">
+      <div class="shot light" data-full="assets/notion-summaries.svg" data-href="https://fsdatalab.github.io/blog/agent-text-at-scale/#figure-3" data-cap="Рисунок 3 из статьи: четыре строки таблицы Notion со сводками Notion AI. Подсветка показывает, как начинается каждая сводка.">
+        <img src="assets/notion-summaries.svg" data-origin="article" alt="Таблица Notion с четырьмя issue. Сводки начинаются по-разному: The issue reports that, The page reports, Pressing Ctrl+C.">
+        <span class="badge">рис. 3 из статьи</span>
+      </div>
+      <figcaption><b>Плохой пример.</b> Notion AI заполнила столбец Summary для 10 открытых issue из ollama/ollama. Сводки начинаются то с «The issue reports that», то с «The page reports», то с действия, а один и тот же объект назван и issue, и page. <a class="src" href="https://fsdatalab.github.io/blog/agent-text-at-scale/#figure-3" target="_blank" rel="noopener">в статье ↗</a></figcaption>
+    </figure>
+    <figure class="rv">
+      <div class="shot light" data-full="assets/discover-headlines.svg" data-href="https://fsdatalab.github.io/blog/agent-text-at-scale/#figure-4" data-cap="Рисунок 4 из статьи: четыре материала из ленты Perplexity Discover за 28 октября 2026 года в стилизованном виде.">
+        <img src="assets/discover-headlines.svg" data-origin="article" alt="Четыре заголовка Perplexity Discover со структурой подлежащее, глагол в настоящем времени и объект.">
+        <span class="badge">рис. 4 из статьи</span>
+      </div>
+      <figcaption><b>Хороший пример.</b> В Perplexity Discover все заголовки построены как подлежащее, глагол в настоящем времени и объект: «Bank of Canada hikes rate to 2.5%». Так выполняются и правило 3, и правило 1. <a class="src" href="https://fsdatalab.github.io/blog/agent-text-at-scale/#figure-4" target="_blank" rel="noopener">в статье ↗</a></figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="p4" class="wrap">
+  <div class="shead rv">
+    <span class="num">04</span><h2>Различие между пунктами должно что-то значить</h2>
+    <a class="src" href="https://fsdatalab.github.io/blog/agent-text-at-scale/#4-use-variation-only-to-show-a-meaningful-difference" target="_blank" rel="noopener">в статье ↗</a>
+  </div>
+  <p class="lead rv">В работе 1986 года Jock Mackinlay ввёл для автоматического построения графиков принцип expressiveness: график выражает все факты из данных и только их. Если один столбец красный, читатель решит, что цвет что-то значит. Авторы переносят идею на текст: отличие пункта по длине, структуре или словам тоже будет прочитано как сигнал.</p>
+
+  <figure class="rv">
+    <div class="shot light fig5" data-full="assets/figure-5.png" data-href="https://fsdatalab.github.io/blog/agent-text-at-scale/#figure-5" data-cap="Рисунок 5 из статьи, снимок интерактивной фигуры: 5 из 11 тем по 100 отзывам на Duolingo. Слева версия плагина анализа данных Claude, справа версия авторов с единым шаблоном и столбчатой диаграммой числа отзывов.">
+      <img src="assets/figure-5.png" data-origin="article" alt="Панель тем из отзывов на Duolingo: длинные разнородные карточки Claude слева, короткие карточки по одному шаблону и столбчатая диаграмма справа.">
+      <span class="badge">рис. 5 из статьи</span>
+    </div>
+    <figcaption>Снимок интерактивной фигуры. В оригинале клик по карточке или столбцу подсвечивает эту тему во всех трёх представлениях. <a class="src" href="https://fsdatalab.github.io/blog/agent-text-at-scale/#figure-5" target="_blank" rel="noopener">в статье ↗</a></figcaption>
+  </figure>
+
+  <div class="grid g2" style="margin-top:22px">
+    <div class="card rv"><h3>Что не так у Claude</h3><p>Авторы запустили плагин анализа данных на 100 свежих отзывах. Версию 7.146.0 называет только карточка об ошибках, а отзывы на русском и турецком упоминает только карточка об энергии. Читатель не может понять, важны ли эти детали: только ли в этой версии есть ошибки и только ли из англоязычных отзывов взяты остальные темы.</p></div>
+    <div class="card rv"><h3>Что сделали авторы</h3><p>В каждой карточке теперь одно предложение о том, что говорят пользователи, и, как правило, один пример из отзывов. Число отзывов вынесено в столбчатую диаграмму: 74, 12, 9, 8 и 3. Часть деталей теряется, но отзывы по любой теме можно открыть.</p></div>
+  </div>
+</section>
+
+<section id="p5" class="wrap">
+  <div class="shead rv">
+    <span class="num">05</span><h2>Оценка в глаголе должна совпадать с целью панели</h2>
+    <a class="src" href="https://fsdatalab.github.io/blog/agent-text-at-scale/#5-align-the-connotation-of-verbs-with-the-purpose-of-the-dashboard" target="_blank" rel="noopener">в статье ↗</a>
+  </div>
+  <p class="lead rv">Панель часто показывает один вид сведений, например что не нравится клиентам. Внимания на сканирование уходит мало, и глагол с ясной окраской помогает понять пункт быстрее.</p>
+  <div class="grid g2">
+    <div class="card rv"><h3>Оценка неясна</h3><p lang="en" class="ex">Chess is a popular new draw…</p><p>Так начинается карточка Claude о шахматах, хотя большая её часть перечисляет жалобы. С первого взгляда не видно, хорошая это новость или плохая.</p></div>
+    <div class="card rv"><h3>Оценка видна сразу</h3><p lang="en" class="ex"><span class="pill good">Users love</span> <span class="pill bad">Users complain</span></p><p>В версии авторов глагол с первого слова отделяет похвалу от проблемы. Для карточки о шахматах они пишут: «Users enjoy the new courses but complain about problems».</p></div>
+  </div>
+</section>
+
+<section id="limits" class="wrap">
+  <div class="shead rv">
+    <span class="num">!</span><h2>На чём держатся правила и где их граница</h2>
+    <a class="src" href="https://fsdatalab.github.io/blog/agent-text-at-scale/#notes" target="_blank" rel="noopener">примечания ↗</a>
+  </div>
+  <p class="lead rv">Сами исследования проводились не на лентах AI-текста. Перенос на списки и панели предлагают авторы статьи, и собственных замеров скорости чтения в статье нет.</p>
+  <div class="scroll-table rv" data-mobile-scroll>
+    <table class="tbl plain">
+      <tr><th>Правило</th><th>Что изучал источник</th><th>Что добавляют авторы</th></tr>
+      <tr><td>1. Разбор</td><td>Понимание предложений у читателей английского (Bever, 1970); возврат взгляда при ошибочном разборе (Frazier, Rayner, 1982)</td><td>Процедуру для заголовков в списках</td></tr>
+      <tr><td>2. Начало</td><td>Eye tracking, 232 пользователя (Nielsen, 2006); первые два слова в списках (Nielsen, 2009)</td><td>Пример с темами писем</td></tr>
+      <tr><td>3. Единообразие</td><td>Параллельные части предложения (Frazier и др., 1984; Sturt и др., 2010)</td><td>Перенос с частей предложения на пункты списка</td></tr>
+      <tr><td>4. Различия</td><td>Графики структурированных данных (Mackinlay, 1986)</td><td>Перенос на неструктурированный текст: авторы называют его «not so far-fetched»</td></tr>
+      <tr><td>5. Глаголы</td><td>Эмоциональные слова распознаются быстрее нейтральных (Kousta и др., 2009)</td><td>Работу нашли, спросив Claude, и, по их словам, внимательно не читали</td></tr>
+    </table>
+  </div>
+  <div class="note rv"><b>Что ещё учесть.</b> Примеры показаны только на простых панелях; применимость к любым AI-артефактам — мнение авторов. Рисунки стилизованы, а на рисунке 5 показаны 5 из 11 тем. Стратегия NVN описана для английского, поэтому для русских лент в своём проекте первый принцип стоит проверить отдельно (примечание редакции конспекта).</div>
+</section>
+
+<section id="apply" class="wrap">
+  <div class="shead rv"><span class="num">✓</span><h2>Как применить</h2></div>
+  <p class="lead rv">Авторы советуют передать чек-лист coding-агенту или сделать из него skill. Шаги ниже и текст инструкции — адаптация для своего проекта, авторы их не проверяли.</p>
+  <div class="checks">
+    <div class="check rv"><div class="box"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div class="txt"><b>Соберите реальную выборку.</b> Выгрузите 20–30 заголовков сессий, сводок или карточек из своего продукта и читайте их подряд, а не по одному.</div></div>
+    <div class="check rv"><div class="box"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div class="txt"><b>Закройте всё, кроме первых двух слов.</b> Если пункты после этого не различить, перенесите отличительные слова в начало.</div></div>
+    <div class="check rv"><div class="box"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div class="txt"><b>Задайте шаблон до генерации.</b> Укажите в промпте форму пункта и время глагола. Для активных сессий авторы взяли продолженную форму.</div></div>
+    <div class="check rv"><div class="box"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div class="txt"><b>Заведите словарь понятий.</b> Запишите одно слово для каждой сущности, чтобы issue не превращался в page.</div></div>
+    <div class="check rv"><div class="box"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div class="txt"><b>Сверьте каждую деталь с остальными карточками.</b> Если номер версии есть только в одной, добавьте такое поле всем либо уберите его.</div></div>
+    <div class="check rv"><div class="box"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div class="txt"><b>Вынесите числа из текста.</b> Значимую переменную, такую как число отзывов, покажите диаграммой, а исходные материалы оставьте доступными по клику.</div></div>
+    <div class="check rv"><div class="box"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div class="txt"><b>Выберите глаголы под цель панели.</b> В панели смешанных отзывов проверьте, видна ли оценка темы по первому глаголу.</div></div>
+    <div class="check rv"><div class="box"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div class="txt"><b>Сравните версии на людях.</b> Покажите старую и новую ленту коллегам и засеките время поиска нужного пункта: статья таких замеров не приводит.</div></div>
+  </div>
+
+  <div class="code rv" style="margin-top:22px">
+    <div class="bar"><span class="lang">Инструкция для агента · адаптация конспекта</span></div>
+    <pre>При генерации списка, ленты или карточек панели:
+1. Начинай пункт с подлежащего или глагола. Если подлежащее
+   везде одно, опусти его. Выбери время глагола по ожиданию читателя.
+2. Ставь слова, отличающие пункт от других, в самое начало.
+3. Используй одну структуру в каждом пункте и одно слово на понятие.
+4. Добавляй различие в длине, составе или словах, только если оно
+   что-то значит. Важные числа выноси в отдельное поле или диаграмму.
+5. Выбирай глаголы, окраска которых совпадает с целью панели.</pre>
+  </div>
+</section>
+
+<section class="wrap">
+  <div class="shead rv"><span class="num">→</span><h2>Ссылки и понятия</h2></div>
+  <div class="tools">
+    <div class="tool-col rv"><h3>// источники из статьи</h3>
+      <div class="tool"><a class="name lnk" href="https://www.nngroup.com/articles/f-shaped-pattern-reading-web-content-discovered/" target="_blank" rel="noopener">F-Shaped Pattern ↗</a><span class="desc">Nielsen, 2006: как читают веб-страницы</span></div>
+      <div class="tool"><a class="name lnk" href="https://www.nngroup.com/articles/first-2-words-a-signal-for-scanning/" target="_blank" rel="noopener">First 2 Words ↗</a><span class="desc">Nielsen, 2009: первые слова пункта списка</span></div>
+      <div class="tool"><a class="name lnk" href="https://link.springer.com/article/10.3758/BF03198303" target="_blank" rel="noopener">Parallel Structure ↗</a><span class="desc">Frazier и др., 1984: параллельная структура</span></div>
+      <div class="tool"><a class="name lnk" href="https://doi.org/10.1145/22949.22950" target="_blank" rel="noopener">Mackinlay, 1986 ↗</a><span class="desc">Автоматическое построение графиков</span></div>
+      <div class="tool"><a class="name lnk" href="https://x.com/sh_reya/status/2115860470175612997" target="_blank" rel="noopener">Пост в X ↗</a><span class="desc">Анонс статьи от Shreya Shankar</span></div>
+    </div>
+    <div class="tool-col rv"><h3>// понятия</h3>
+      <div class="tool"><span class="name">NVN</span><span class="desc">Стратегия чтения: существительное, глагол, существительное как деятель, действие и объект</span></div>
+      <div class="tool"><span class="name">F-схема</span><span class="desc">Читают начало строк и пропускают большую часть остального</span></div>
+      <div class="tool"><span class="name">Expressiveness</span><span class="desc">График выражает все факты из данных и только их</span></div>
+      <div class="tool"><span class="name">Eye tracking</span><span class="desc">Запись движений взгляда при чтении</span></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Визуальный конспект статьи <b>«Five Principles for Generating Readable AI Text in Bulk»</b> · Shreya Shankar · Full Stack Data.<br>
+  Рисунки взяты из статьи, блоки разбора и «Как применить» подготовлены для конспекта. <a href="https://fsdatalab.github.io/blog/agent-text-at-scale/" target="_blank" rel="noopener">Открыть оригинал ↗</a>
+</footer>
+
+<div id="lb">
+  <span class="close">×</span>
+  <div class="lbcap" id="lbcap"></div>
+  <a class="lbbtn" id="lbbtn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M14 5h5v5"/><path d="M19 5l-9 9"/></svg>Открыть в статье</a>
+</div>
+
+<script>(function(){var i=document.createElement('img');i.id='lbimg';i.alt='';var l=document.getElementById('lb');l.insertBefore(i,document.getElementById('lbcap'));})();</script>
+<script>
+(function(){
+  var prog=document.getElementById('progress');
+  function onScroll(){var h=document.documentElement;prog.style.width=((h.scrollTop)/(h.scrollHeight-h.clientHeight)*100)+'%';}
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll();
+
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.12});
+  document.querySelectorAll('.rv').forEach(function(el){io.observe(el);});
+
+  var navlinks=[].slice.call(document.querySelectorAll('.nav-links a'));
+  var secs=navlinks.map(function(a){return document.querySelector(a.getAttribute('href'));});
+  var spy=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){var id='#'+e.target.id;navlinks.forEach(function(a){a.classList.toggle('active',a.getAttribute('href')===id);});}});},{rootMargin:'-45% 0px -50% 0px'});
+  secs.forEach(function(s){if(s)spy.observe(s);});
+
+  // lightbox: data-full = image path, data-href = the place in the article
+  var lb=document.getElementById('lb'),lbimg=document.getElementById('lbimg'),lbcap=document.getElementById('lbcap'),lbbtn=document.getElementById('lbbtn');
+  document.querySelectorAll('.shot[data-full]').forEach(function(s){
+    s.addEventListener('click',function(){
+      lbimg.src=s.getAttribute('data-full');
+      lbcap.textContent=s.getAttribute('data-cap')||'';
+      var href=s.getAttribute('data-href');
+      if(href){lbbtn.href=href;lbbtn.style.display='inline-flex';}else{lbbtn.style.display='none';}
+      lb.classList.add('on');
+    });
+  });
+  function close(){lb.classList.remove('on');lbimg.src='';}
+  lb.addEventListener('click',function(e){if(e.target===lb||e.target.classList.contains('close'))close();});
+  lbbtn.addEventListener('click',function(e){e.stopPropagation();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+
+  document.querySelectorAll('.check').forEach(function(c){c.addEventListener('click',function(){c.classList.toggle('done');});});
+})();
+</script>
+</body>
+</html>
